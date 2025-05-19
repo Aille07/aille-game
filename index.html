@@ -11,7 +11,6 @@
       background: linear-gradient(to bottom, #a0c4ff, #bdb2ff);
       overflow: hidden;
     }
-
     .container {
       display: flex;
       height: 100vh;
@@ -20,61 +19,60 @@
       justify-content: space-around;
       padding: 30px;
     }
-
     .left-panel {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: 10px;
+      max-width: 320px;
     }
-
     h1 {
       color: white;
       font-size: 2.5em;
       text-shadow: 2px 2px 4px #6666cc;
+      margin: 0 0 10px 0;
     }
-
     input, select, button {
       padding: 10px;
       font-size: 1em;
       border-radius: 5px;
       border: none;
       margin-top: 5px;
+      width: 100%;
+      box-sizing: border-box;
     }
-
     button {
       background-color: #7b9acc;
       color: white;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #5c7fa3;
     }
-
     .character {
       position: relative;
       animation: float 3s ease-in-out infinite;
+      width: 320px;
+      height: 400px;
     }
-
     .character img {
-      width: 300px;
+      width: 100%;
       border-radius: 10px;
       box-shadow: 0 0 20px #ffffff88;
+      user-select: none;
+      pointer-events: none;
     }
-
     @keyframes float {
       0% { transform: translateY(0); }
       50% { transform: translateY(-10px); }
       100% { transform: translateY(0); }
     }
-
     .dialogue-box {
       position: absolute;
       bottom: -100px;
       left: 0;
       width: 100%;
-      background: rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.9);
       border-radius: 10px;
       padding: 10px;
       text-align: center;
@@ -82,11 +80,28 @@
       font-size: 1.2em;
       color: #333;
       animation: popin 0.5s ease-out;
+      user-select: none;
     }
-
     @keyframes popin {
       from { transform: scale(0.8); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
+    }
+    /* 遊戲畫布 */
+    #gameCanvas {
+      border-radius: 10px;
+      background-color: #6a8caf;
+      box-shadow: 0 0 15px #445577cc;
+      cursor: pointer;
+      user-select: none;
+    }
+    /* 分數與關卡文字 */
+    #infoPanel {
+      margin-top: 10px;
+      color: white;
+      font-weight: bold;
+      font-size: 1.2em;
+      text-align: center;
+      user-select: none;
     }
   </style>
 </head>
@@ -107,15 +122,29 @@
         <option value="es">Español</option>
       </select>
       
-      <button onclick="startGame()">開始冒險</button>
+      <button id="startBtn">開始冒險</button>
+
+      <div id="infoPanel"></div>
     </div>
     
+    <div class="character">
+      <img src="https://i.imgur.com/6IUbEMx.png" alt="Aille" />
+      <div class="dialogue-box" id="dialogue">你好，我是 Aille！</div>
+      <canvas id="gameCanvas" width="320" height="400" style="display:none; margin-top: 20px;"></canvas>
+    </div>
+  </div>
+
   <script>
     const dialogue = document.getElementById("dialogue");
     const languageSelector = document.getElementById("language");
     const title = document.getElementById("title");
     const nameLabel = document.getElementById("name-label");
     const langLabel = document.getElementById("lang-label");
+    const startBtn = document.getElementById("startBtn");
+    const playerNameInput = document.getElementById("player-name");
+    const infoPanel = document.getElementById("infoPanel");
+    const gameCanvas = document.getElementById("gameCanvas");
+    const ctx = gameCanvas.getContext("2d");
 
     const translations = {
       zh: {
@@ -125,7 +154,10 @@
         start: "開始冒險",
         greetings: "你好，我是 Aille！",
         win: "我們成功了！星星為你閃耀！",
-        lose: "沒關係，再試一次吧！"
+        lose: "沒關係，再試一次吧！",
+        levelIntro: ["歡迎來到關卡 1！", "快接住星星吧！"],
+        nextLevel: "進入下一關！",
+        gameOver: "遊戲結束，感謝遊玩！"
       },
       en: {
         title: "Aille: Starry Path",
@@ -134,7 +166,10 @@
         start: "Start Adventure",
         greetings: "Hi, I'm Aille!",
         win: "We did it! The stars are shining for you!",
-        lose: "It's okay, let's try again!"
+        lose: "It's okay, let's try again!",
+        levelIntro: ["Welcome to Level 1!", "Catch the stars!"],
+        nextLevel: "Next Level!",
+        gameOver: "Game Over, Thanks for playing!"
       },
       ja: {
         title: "Aille：星の道",
@@ -143,7 +178,10 @@
         start: "冒険を始める",
         greetings: "こんにちは、アイユです！",
         win: "やった！星が君に輝いてる！",
-        lose: "大丈夫、もう一度やってみよう！"
+        lose: "大丈夫、もう一度やってみよう！",
+        levelIntro: ["レベル1へようこそ！", "星をキャッチしてね！"],
+        nextLevel: "次のレベル！",
+        gameOver: "ゲーム終了、遊んでくれてありがとう！"
       },
       ko: {
         title: "Aille: 별빛의 길",
@@ -152,7 +190,10 @@
         start: "모험 시작",
         greetings: "안녕! 나는 아일이야!",
         win: "우리가 해냈어! 별이 너를 위해 빛나고 있어!",
-        lose: "괜찮아! 다시 해보자!"
+        lose: "괜찮아! 다시 해보자!",
+        levelIntro: ["1레벨에 오신 걸 환영해요!", "별을 잡아봐요!"],
+        nextLevel: "다음 레벨!",
+        gameOver: "게임 오버, 플레이해줘서 고마워요!"
       },
       fr: {
         title: "Aille : Chemin étoilé",
@@ -161,7 +202,10 @@
         start: "Commencer l’aventure",
         greetings: "Bonjour, je suis Aille !",
         win: "On a réussi ! Les étoiles brillent pour toi !",
-        lose: "Ce n’est pas grave, réessayons !"
+        lose: "Ce n’est pas grave, réessayons !",
+        levelIntro: ["Bienvenue au niveau 1 !", "Attrape les étoiles !"],
+        nextLevel: "Niveau suivant !",
+        gameOver: "Fin du jeu, merci d’avoir joué !"
       },
       es: {
         title: "Aille: Camino de estrellas",
@@ -170,7 +214,10 @@
         start: "Iniciar aventura",
         greetings: "¡Hola! Soy Aille.",
         win: "¡Lo logramos! ¡Las estrellas brillan para ti!",
-        lose: "No pasa nada, ¡intentémoslo otra vez!"
+        lose: "No pasa nada, ¡intentémoslo otra vez!",
+        levelIntro: ["¡Bienvenido al nivel 1!", "¡Atrapa las estrellas!"],
+        nextLevel: "¡Siguiente nivel!",
+        gameOver: "Juego terminado, ¡gracias por jugar!"
       }
     };
 
@@ -180,18 +227,221 @@
       title.textContent = t.title;
       nameLabel.textContent = t.nameLabel;
       langLabel.textContent = t.langLabel;
+      startBtn.textContent = t.start;
       dialogue.textContent = t.greetings;
-      document.querySelector("button").textContent = t.start;
+      infoPanel.textContent = "";
     }
 
     languageSelector.addEventListener("change", updateLanguage);
 
-    function startGame() {
-      const lang = languageSelector.value;
-      const t = translations[lang];
-      const success = Math.random() > 0.5;
-      dialogue.textContent = success ? t.win : t.lose;
+    // 遊戲設定
+    const levels = [
+      { bgColor: "#87ceeb", goal: 3, introIndex: 0 },   // 藍天
+      { bgColor: "#4b0082", goal: 5, introIndex: 1 },   // 靛紫
+      { bgColor: "#7b68ee", goal: 7, introIndex: 2 }    // 中紫
+    ];
+
+    // 粒子類
+    class Particle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = Math.random() * 4 + 2;
+        this.color = 'white';
+        this.speedX = (Math.random() - 0.5) * 2;
+        this.speedY = (Math.random() - 1.5) * 2;
+        this.life = 60;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.radius -= 0.05;
+        this.life--;
+      }
+      draw() {
+        if(this.radius > 0) {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.shadowColor = 'white';
+          ctx.shadowBlur = 8;
+          ctx.fill();
+        }
+      }
     }
+
+    // 玩家物件
+    class Player {
+      constructor() {
+        this.width = 60;
+        this.height = 60;
+        this.x = gameCanvas.width / 2 - this.width / 2;
+        this.y = gameCanvas.height - this.height - 20;
+        this.color = '#6495ED';
+        this.speed = 8;
+        this.score = 0;
+      }
+      move(direction) {
+        this.x += direction * this.speed;
+        if(this.x < 0) this.x = 0;
+        if(this.x + this.width > gameCanvas.width) this.x = gameCanvas.width - this.width;
+      }
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+      }
+      getRect() {
+        return {x: this.x, y: this.y, width: this.width, height: this.height};
+      }
+    }
+
+    // 星星物件
+    class Star {
+      constructor() {
+        this.radius = 20;
+        this.x = Math.random() * (gameCanvas.width - this.radius * 2) + this.radius;
+        this.y = -this.radius * 2;
+        this.speedY = 3 + Math.random() * 2;
+        this.color = '#fffacd';
+      }
+      update() {
+        this.y += this.speedY;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = 'yellow';
+        ctx.shadowBlur = 15;
+        ctx.fill();
+      }
+      getRect() {
+        return {x: this.x - this.radius, y: this.y - this.radius, width: this.radius*2, height: this.radius*2};
+      }
+    }
+
+    function rectCollision(r1, r2) {
+      return !(r1.x > r2.x + r2.width ||
+               r1.x + r1.width < r2.x ||
+               r1.y > r2.y + r2.height ||
+               r1.y + r1.height < r2.y);
+    }
+
+    // 遊戲邏輯
+    let player;
+    let stars = [];
+    let particles = [];
+    let keys = {};
+    let currentLevel = 0;
+    let gameStarted = false;
+    let lang = languageSelector.value;
+
+    function resetLevel() {
+      player = new Player();
+      stars = [];
+      particles = [];
+      for(let i=0; i<levels[currentLevel].goal; i++) {
+        stars.push(new Star());
+      }
+      infoPanel.textContent = translations[lang].levelIntro[currentLevel] || "";
+      gameCanvas.style.backgroundColor = levels[currentLevel].bgColor;
+    }
+
+    function createParticles(x, y) {
+      for(let i=0; i<15; i++) {
+        particles.push(new Particle(x, y));
+      }
+    }
+
+    function updateGame() {
+      ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+      // 玩家移動
+      if(keys['ArrowLeft'] || keys['a']) player.move(-1);
+      if(keys['ArrowRight'] || keys['d']) player.move(1);
+      player.draw();
+
+      // 星星更新
+      for(let i = stars.length -1; i >= 0; i--) {
+        stars[i].update();
+        stars[i].draw();
+
+        if(stars[i].y - stars[i].radius > gameCanvas.height) {
+          // 星星掉落視為失敗
+          stars.splice(i, 1);
+          // 遊戲結束
+          endGame(false);
+          return;
+        }
+
+        // 碰撞偵測
+        if(rectCollision(player.getRect(), stars[i].getRect())) {
+          createParticles(stars[i].x, stars[i].y);
+          stars.splice(i, 1);
+          player.score++;
+          infoPanel.textContent = `Score: ${player.score} / ${levels[currentLevel].goal}`;
+          if(player.score >= levels[currentLevel].goal) {
+            // 通關下一關
+            currentLevel++;
+            if(currentLevel >= levels.length) {
+              endGame(true);
+            } else {
+              dialogue.textContent = translations[lang].nextLevel;
+              setTimeout(() => {
+                resetLevel();
+                player.score = 0;
+                dialogue.textContent = translations[lang].levelIntro[currentLevel] || "";
+              }, 2000);
+            }
+          }
+        }
+      }
+
+      // 粒子更新
+      for(let i = particles.length -1; i >= 0; i--) {
+        particles[i].update();
+        if(particles[i].life <= 0 || particles[i].radius <= 0) {
+          particles.splice(i, 1);
+        } else {
+          particles[i].draw();
+        }
+      }
+
+      requestAnimationFrame(updateGame);
+    }
+
+    function endGame(win) {
+      gameStarted = false;
+      dialogue.textContent = win ? translations[lang].win : translations[lang].lose;
+      infoPanel.textContent = win ? translations[lang].gameOver : '';
+      gameCanvas.style.display = "none";
+      startBtn.disabled = false;
+    }
+
+    function startGame() {
+      lang = languageSelector.value;
+      if(!playerNameInput.value.trim()) {
+        alert("請輸入角色名稱 / Please enter a name");
+        return;
+      }
+      gameStarted = true;
+      startBtn.disabled = true;
+      dialogue.textContent = translations[lang].levelIntro[0];
+      infoPanel.textContent = "";
+      gameCanvas.style.display = "block";
+      currentLevel = 0;
+      resetLevel();
+      player.score = 0;
+      updateGame();
+    }
+
+    startBtn.addEventListener("click", startGame);
+    languageSelector.addEventListener("change", () => {
+      updateLanguage();
+      if(!gameStarted) {
+        dialogue.textContent = translations[languageSelector.value].greetings;
+      }
+    });
 
     updateLanguage();
   </script>
